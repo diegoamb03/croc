@@ -802,8 +802,8 @@ def main():
     bucket_name = "bucket-quickstart_croc_830"
     
     # Credenciales
-    EMAIL = "grandessuperficies@donchicharron.com.co"
-    PASSWORD = "Mar2cazaz123*"
+    EMAIL = "EMAIL"
+    PASSWORD = "PASSWORD"
     
     # Crear instancia de automatización
     automation = ExitoAutomation(download_path, credentials_path, bucket_name)
@@ -822,4 +822,5 @@ def main():
 
 
 if __name__ == "__main__":
+
     main()
