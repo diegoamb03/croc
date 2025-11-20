@@ -1,0 +1,99 @@
+import os
+from airflow import DAG
+from datetime import datetime, timedelta
+from airflow.models import Variable
+from airflow.operators.dummy import DummyOperator
+from airflow.sensors.external_task import ExternalTaskSensor
+from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
+
+entity                          = "transactions"
+country                         = "ec"
+date_empty                      = "0"
+time_empty                      = "0"
+integer_empty                   = "0"
+double_empty                    = "0.0"
+alphanumeric_empty              = ""
+time_zone_hours                 = -5
+dependencies                    = []
+zone                            = "mp"
+upperCountry                    = country.upper()
+environment                     = os.environ["environment"]
+
+# Dag definition
+dagKwargs = {
+    "dag_id"            : f"transform_export_bq_{country}_mp_transactions",
+    "schedule_interval" : None,
+    "start_date"        : datetime(2025, 5, 12),
+    "catchup"           : False,
+    "concurrency"       : 4,
+    "tags"              : ["AML", "EC"],
+    "max_active_runs"   : 4,
+}
+
+outputDataset = {
+    "dev": f"trf_{country}_mp_dev",
+    "uat": f"trf_{country}_mp_uat",
+    "prd": f"trf_{country}_mp_prd"
+}
+
+templateDict = {
+    "environment"           : environment,
+    "country"               : country,
+    "integer_empty"         : integer_empty,
+    "alphanumeric_empty"    : alphanumeric_empty,
+    "double_empty"          : double_empty,
+    "ds"                    : "{{ ds }}"
+}
+
+# Leer el archivo SQL de créditos AML (ejecutar primero)
+with open(f"/home/airflow/gcs/dags/mp_40509869_trf_tbl_{entity}_{zone}_{country}_creditosaml.sql", "r") as f:
+    sql_creditosaml = f.read().format(**templateDict)
+
+# Leer el archivo SQL principal de transacciones (ejecutar después)
+with open(f"/home/airflow/gcs/dags/mp_40509869_trf_tbl_{entity}_{zone}_{country}.sql", "r") as f:
+    sql_transactions = f.read().format(**templateDict)
+
+# Configuración para ejecutar créditos AML (solo ejecución, sin tabla de destino)
+jobConfigCreditosAML = {
+    "query": {
+        "query"             : sql_creditosaml,
+        "useLegacySql"      : False
+    }
+}
+
+# Configuración para la query de transacciones (operación normal con tabla destino)
+jobConfigTransactions = {
+    "query": {
+        "query"             : sql_transactions,
+        "createDisposition" : "CREATE_NEVER",
+        "writeDisposition"  : "WRITE_TRUNCATE",
+        "useLegacySql"      : False,
+        "destinationTable"  : {
+            "projectId"     : f"digfact-credit-integration-{environment}",
+            "datasetId"     : outputDataset[environment],
+            "tableId"       : f"trf_tbl_{entity}_{zone}_{environment}" + "${{ ds_nodash }}"
+        }
+    }
+}
+
+with DAG(**dagKwargs) as dag:
+    
+    start = DummyOperator(task_id = "start")
+    end   = DummyOperator(task_id = "end")
+    
+    # Task para ejecutar créditos AML (solo ejecución)
+    execute_creditos_aml = BigQueryInsertJobOperator(
+        task_id = "execute_creditos_aml",
+        configuration = jobConfigCreditosAML
+    )
+    
+    # Task para procesar transacciones (operación normal)
+    transform_transactions = BigQueryInsertJobOperator(
+        task_id = "transform_transactions",
+        configuration = jobConfigTransactions
+    )
+    
+    # Definir el flujo de ejecución:
+    # 1. Ejecutar créditos AML (solo ejecución)
+    # 2. Procesar transacciones (operación normal con destino)
+    start >> execute_creditos_aml >> transform_transactions >> end
