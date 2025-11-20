@@ -31,8 +31,8 @@ RUTA_VENTAS = "raw/Ventas/moderno/cencosud/ventas"
 RUTA_INVENTARIO = "raw/Ventas/moderno/cencosud/inventario"
 
 # Credenciales login
-EMAIL = "grandessuperficies@donchicharron.com.co"
-PASSWORD = "Mar1casas234"
+EMAIL = "WRITE EMAIL"
+PASSWORD = "WRITE PASSWORD"
 
 def setup_driver():
     """Funcion simplificada que funciona - Selenium estandar"""
@@ -595,4 +595,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n⚠️ Proceso interrumpido por el usuario")
     except Exception as e:
+
         print(f"\n❌ Error inesperado: {e}")
