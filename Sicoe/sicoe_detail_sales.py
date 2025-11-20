@@ -61,7 +61,7 @@ class SicoeConfig:
         login_url: str = "https://sicoe.com.co/sicoe/dist/#/login",
         nit: str = "8301256101",
         username: str = "analistadatos",
-        password: str = "628473*****Se",
+        password: str = "",
         bucket_name: str = "bucket-quickstart_croc_830",
         destination_prefix: str = "raw/Ventas/sicoe/",
         destination_prefix_facture: str = "raw/Ventas/sicoe_facture_diarias/",
@@ -859,4 +859,5 @@ if __name__ == "__main__":
         print(" Proceso interrumpido por el usuario")
     except Exception as e:
         logger.critical(f"Error no manejado: {e}", exc_info=True)
+
         print("Error crítico en el proceso")
